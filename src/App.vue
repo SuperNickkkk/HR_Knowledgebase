@@ -1,34 +1,24 @@
 <template>
-  <div
-    class="flex flex-col h-screen transition-all duration-1000 ease-in-out"
-    :class="isEnhancedMode ? 'bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800' : 'bg-gradient-to-br from-slate-900 to-slate-800'"
-  >
-    <header
-      class="flex items-center p-4"
-      :class="isEnhancedMode ? 'bg-indigo-900/50 backdrop-blur-md' : 'bg-slate-800'"
-    >
+  <div class="flex flex-col h-screen bg-gradient-to-br from-slate-900 to-slate-800">
+    <header class="flex items-center p-4 bg-slate-800">
       <div class="flex items-center flex-grow">
-        <h1
-          class="text-2xl font-bold flex items-center"
-          :class="isEnhancedMode ? 'text-fuchsia-400' : 'text-emerald-400'"
-        >
+        <h1 class="text-2xl font-bold flex items-center text-emerald-400">
           <Cpu class="mr-2" :size="24" />
           智能HR知识库
-          <span v-if="isEnhancedMode" class="text-sm ml-2 bg-fuchsia-700 px-2 py-1 rounded-full">AI增强</span>
         </h1>
 
-        <div class="flex items-center ml-8 space-x-8" :class="isEnhancedMode ? 'text-fuchsia-300' : 'text-emerald-300'">
+        <div class="flex items-center ml-8 space-x-8 text-emerald-300">
           <div class="flex items-center space-x-2">
             <Brain class="w-5 h-5 animate-pulse" />
-            <span class="text-sm font-medium">AI分析</span>
+            <span class="text-sm font-medium">智能问答</span>
           </div>
           <div class="flex items-center space-x-2">
             <Zap class="w-5 h-5 animate-bounce" />
-            <span class="text-sm font-medium">实时更新</span>
+            <span class="text-sm font-medium">创新形式</span>
           </div>
           <div class="flex items-center space-x-2">
             <Database class="w-5 h-5 animate-spin-slow" />
-            <span class="text-sm font-medium">智能匹配</span>
+            <span class="text-sm font-medium">探索优化</span>
           </div>
         </div>
       </div>
@@ -36,37 +26,50 @@
       <div class="flex gap-4">
         <button 
           @click="openSettings" 
-          class="text-slate-400 hover:text-fuchsia-400 transition-colors" 
+          class="text-slate-400 hover:text-emerald-400 transition-colors" 
           aria-label="设置"
         >
           <Settings :size="20" />
         </button>
-        <button 
-          class="text-slate-400 hover:text-fuchsia-400 transition-colors" 
+        <!-- <button 
+          class="text-slate-400 hover:text-emerald-400 transition-colors" 
           aria-label="返回主页"
         >
           <Home :size="20" />
-        </button>
-        <button 
+        </button> -->
+        <!-- <button 
           class="text-slate-400 hover:text-slate-100 transition-colors" 
           aria-label="关闭"
         >
           <X :size="20" />
-        </button>
+        </button> -->
       </div>
     </header>
 
     <main ref="mainContent" class="flex-grow overflow-y-auto p-6 space-y-4" @scroll="handleScroll">
       <div v-if="showCategories" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-        <div v-for="category in categories" :key="category.name" 
-             class="bg-slate-800 rounded-lg p-4 hover:bg-slate-700 transition-all duration-300 cursor-pointer transform hover:scale-105"
-             :class="isEnhancedMode ? 'border border-fuchsia-500/30 hover:border-fuchsia-500' : ''"
-             @click="selectCategory(category)">
-          <h3 class="text-lg font-semibold mb-2 flex items-center" :class="isEnhancedMode ? 'text-fuchsia-400' : 'text-emerald-400'">
+        <div v-for="(category, index) in categories" 
+             :key="category.name" 
+             class="bg-slate-800 rounded-lg p-4 transition-all duration-300 cursor-pointer transform hover:scale-105"
+             :class="[
+               selectedCardIndex === index 
+                 ? 'ring-2 ring-emerald-500 shadow-lg shadow-emerald-500/20 bg-slate-700' 
+                 : 'hover:bg-slate-700',
+               currentKnowledgeBase?.name === category.name 
+                 ? 'ring-2 ring-emerald-500 shadow-lg shadow-emerald-500/20 bg-slate-700'
+                 : ''
+             ]"
+             @click="selectCategory(category, index)"
+        >
+          <h3 class="text-lg font-semibold mb-2 flex items-center text-emerald-400">
             <component :is="category.icon" class="mr-2" :size="18" />
             {{ category.name }}
+            <span v-if="currentKnowledgeBase?.name === category.name" 
+                  class="ml-2 text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">
+              已选择
+            </span>
           </h3>
-          <p :class="isEnhancedMode ? 'text-fuchsia-200' : 'text-slate-300'">{{ category.description }}</p>
+          <p class="text-slate-300">{{ category.description }}</p>
         </div>
       </div>
       <div v-if="error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
@@ -80,29 +83,22 @@
           <User v-else :class="isEnhancedMode ? 'text-fuchsia-400' : 'text-emerald-400'" class="w-8 h-8 mt-1" />
           <div
             v-if="message.sender === 'ai'"
-            class="rounded-lg p-4 shadow-lg max-w-3xl relative overflow-hidden group"
-            :class="isEnhancedMode 
-              ? 'bg-indigo-800/50 backdrop-blur-sm border border-fuchsia-500/50 shadow-fuchsia-500/20' 
-              : 'bg-slate-700'"
+            class="rounded-lg p-4 shadow-lg max-w-3xl relative overflow-hidden group bg-slate-700"
           >
             <div class="prose prose-invert max-w-none">
-              <div class="markdown-content mb-4" 
-                   :class="isEnhancedMode ? 'text-fuchsia-50' : 'text-slate-50'"
+              <div class="markdown-content mb-4 text-slate-50"
                    v-html="renderContent(message.content)"
               ></div>
             </div>
 
-            <div v-if="message.references" class="mt-4 pt-4 border-t border-gray-600/30">
+            <div v-if="showReferences && getReferences(message).length > 0" class="mt-4 pt-4 border-t border-gray-600/30">
               <div class="flex flex-wrap gap-2">
-                <div v-for="(chunk, index) in parseReferences(message.references)" 
+                <div v-for="(chunk, index) in getReferences(message)" 
                      :key="index"
                      class="relative group/ref inline-block"
                 >
                   <span 
-                    class="reference-tag inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer transition-all duration-200"
-                    :class="isEnhancedMode 
-                      ? 'bg-fuchsia-800/60 hover:bg-fuchsia-700/80 text-fuchsia-100' 
-                      : 'bg-slate-600/60 hover:bg-slate-500/80 text-slate-100'"
+                    class="reference-tag inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer transition-all duration-200 bg-slate-600/60 hover:bg-slate-500/80 text-slate-100"
                     @mouseenter="showPopup($event, index)"
                     @mouseleave="hidePopup"
                   >
@@ -128,15 +124,10 @@
                          @mouseenter="keepPopup = true"
                          @mouseleave="keepPopup = false"
                     >
-                      <div class="p-4 rounded-lg shadow-xl overflow-auto"
-                           :class="isEnhancedMode 
-                             ? 'bg-indigo-900/95 backdrop-blur-sm border border-fuchsia-500/30' 
-                             : 'bg-slate-800/95 backdrop-blur-sm border border-slate-600/30'"
+                      <div class="p-4 rounded-lg shadow-xl overflow-auto bg-slate-800/95 backdrop-blur-sm border border-slate-600/30"
                            :style="{ maxHeight: 'calc(100vh - 100px)' }"
                       >
-                        <div class="text-sm leading-relaxed custom-scrollbar"
-                             :class="isEnhancedMode ? 'text-fuchsia-50' : 'text-slate-50'"
-                        >
+                        <div class="text-sm leading-relaxed custom-scrollbar text-slate-50">
                           {{ chunk.content }}
                         </div>
                         <div class="mt-3 pt-3 border-t border-gray-600/30 flex items-center justify-between text-xs text-gray-400">
@@ -150,9 +141,8 @@
                           </span>
                         </div>
                       </div>
-                      <div class="absolute w-4 h-4 transform rotate-45"
+                      <div class="absolute w-4 h-4 transform rotate-45 bg-slate-800"
                            :style="arrowPosition"
-                           :class="isEnhancedMode ? 'bg-indigo-900' : 'bg-slate-800'"
                       ></div>
                     </div>
                   </Transition>
@@ -160,7 +150,6 @@
               </div>
             </div>
 
-            <div v-if="isEnhancedMode" class="absolute -bottom-4 -right-4 w-24 h-24 bg-fuchsia-500 rounded-full opacity-20 animate-ping"></div>
             <button
               @click="copyToClipboard(message.content, index)"
               class="absolute top-2 right-2 bg-gray-700 hover:bg-gray-600 text-white rounded px-2 py-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200"
@@ -201,51 +190,45 @@
               @click="copyToClipboard(message.content, index)"
               class="absolute top-2 right-2 bg-gray-700 hover:bg-gray-600 text-white rounded px-2 py-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200"
             >
-              {{ copiedIndex === index ? '已复制' : '复' }}
+              {{ copiedIndex === index ? '已复制' : '复制' }}
             </button>
           </div>
         </div>
       </div>
     </main>
 
-    <footer
-      class="p-4"
-      :class="isEnhancedMode ? 'bg-indigo-900/50 backdrop-blur-md' : 'bg-slate-800'"
-    >
+    <footer class="p-4 bg-slate-800">
       <div class="flex gap-2 mb-2">
         <button
-          @click="toggleEnhancedMode"
-          class="flex-1 py-2 px-4 rounded-md transition duration-500 ease-in-out relative overflow-hidden"
-          :class="isEnhancedMode ? 'bg-fuchsia-600 hover:bg-fuchsia-700 text-white shadow-lg shadow-fuchsia-500/50' : 'bg-emerald-600 hover:bg-emerald-700 text-white'"
+          v-if="isGenerating"
+          @click="stopGeneration"
+          class="flex-1 py-2 px-4 rounded-md bg-red-600 hover:bg-red-700 text-white transition duration-200 ease-in-out"
         >
           <span class="relative z-10 flex items-center justify-center">
-            <Zap :size="18" class="mr-2" />
-            {{ isEnhancedMode ? '关闭AI增强' : '开启AI增强' }}
+            <Square :size="18" class="mr-2" />
+            停止生成
           </span>
-          <div v-if="isEnhancedMode" class="absolute inset-0 bg-gradient-to-r from-fuchsia-500 to-pink-500 animate-gradient-x"></div>
         </button>
         <button
           @click="clearChat"
-          class="flex-1 py-2 px-4 rounded-md transition duration-200 ease-in-out"
-          :class="isEnhancedMode ? 'bg-indigo-600 hover:bg-indigo-700 text-fuchsia-100' : 'bg-slate-600 hover:bg-slate-700 text-white'"
+          class="flex-1 py-2 px-4 rounded-md bg-slate-600 hover:bg-slate-700 text-white transition duration-200 ease-in-out"
         >
           <Eraser :size="18" class="inline mr-2" />
           清除对话
         </button>
         <button
           @click="toggleCategories"
-          class="flex-1 py-2 px-4 rounded-md transition duration-200 ease-in-out"
-          :class="isEnhancedMode ? 'bg-indigo-600 hover:bg-indigo-700 text-fuchsia-100' : 'bg-slate-600 hover:bg-slate-700 text-white'"
+          class="flex-1 py-2 px-4 rounded-md bg-slate-600 hover:bg-slate-700 text-white transition duration-200 ease-in-out"
         >
           <BookOpen :size="18" class="inline mr-2" />
-          {{ showCategories ? '隐藏目录' : '显示目录' }}
+          {{ showCategories ? '收起目录' : '展开目录' }}
         </button>
       </div>
       <div class="flex relative">
         <input
           v-model="userInput"
           @keyup.enter="sendMessage"
-          placeholder="输入您的HR相关问题..."
+          placeholder="输入您的问题..."
           class="flex-grow py-2 px-4 rounded-l-md focus:outline-none focus:ring-2 transition-all duration-500 ease-in-out pr-10"
           :class="isEnhancedMode ? 'bg-indigo-800/50 text-fuchsia-100 placeholder-fuchsia-300 focus:ring-fuchsia-500 backdrop-blur-sm' : 'bg-slate-700 text-slate-100 focus:ring-emerald-500'"
         />
@@ -269,6 +252,31 @@
               <X :size="24" />
             </button>
           </h2>
+
+          <!-- 添加全局设置部分 -->
+          <div class="mb-6 border-b border-gray-200 dark:border-gray-700 pb-4">
+            <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">全局设置</h3>
+            <div class="flex items-center justify-between">
+              <span class="text-gray-700 dark:text-gray-300">显示引用标签</span>
+              <button
+                @click="toggleReferenceDisplay"
+                class="relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out"
+                :class="showReferences ? 'bg-emerald-600' : 'bg-gray-400'"
+                role="switch"
+                :aria-checked="showReferences"
+              >
+                <span
+                  class="inline-block w-4 h-4 transform rounded-full bg-white transition-transform duration-200 ease-in-out"
+                  :class="showReferences ? 'translate-x-6' : 'translate-x-1'"
+                />
+              </button>
+            </div>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              开启后将显示知识库的引用来源和相关度
+            </p>
+          </div>
+
+          <!-- 知识库列表设置 -->
           <div class="space-y-4">
             <div v-for="(kb, index) in knowledgeBases" :key="index" class="border-b border-gray-200 dark:border-gray-700 pb-4">
               <div class="flex items-center justify-between mb-2">
@@ -318,15 +326,22 @@
               </div>
             </div>
           </div>
-          <button 
-            @click="addKnowledgeBase" 
-            class="mt-4 bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
-          >
-            添加新知识库
-          </button>
-          <button @click="saveSettings" class="mt-4 ml-2 bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
-            保存设置
-          </button>
+          
+          <!-- 保存按钮 -->
+          <div class="mt-6 flex justify-end space-x-3">
+            <button 
+              @click="closeSettings" 
+              class="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+            >
+              取消
+            </button>
+            <button 
+              @click="saveSettings" 
+              class="px-4 py-2 bg-emerald-500 text-white rounded-md hover:bg-emerald-600"
+            >
+              保存设置
+            </button>
+          </div>
         </div>
       </div>
     </Transition>
@@ -336,7 +351,7 @@
         <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-md w-full">
           <h2 class="text-2xl font-bold mb-4 text-gray-800 dark:text-white">欢迎用智能HR知识库</h2>
           <p class="text-gray-600 dark:text-gray-300 mb-4">
-            本系统基于科创项目实现，答案可能存不准确。您的使用和反馈将提供给我们的团队进行进一步优化。感谢您的参和使用！
+            本系统基于科创项目实现，答案可存不准确。您的使用和反馈将提供给我们的团队进行进一步优化。感谢您的参和使用！
           </p>
           <button 
             @click="closeWelcomeModal" 
@@ -352,7 +367,7 @@
 
 <script setup>
 import { ref, watch, onMounted, nextTick, computed, onUnmounted } from 'vue'
-import { Send, Zap, Eraser, BookOpen, X, Home, Bot, Brain, Database, Cpu, Users, Calendar, TrendingUp, Briefcase, UserPlus, Book, User, Settings, Trash2, ThumbsUp, ThumbsDown } from 'lucide-vue-next'
+import { Send, Square, Eraser, BookOpen, X, Home, Bot, Cpu, Book, User, Settings, Trash2, ThumbsUp, ThumbsDown, Brain, Zap, Database } from 'lucide-vue-next'
 import { KnowledgeBaseService } from '@/services/knowledgeBase'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
@@ -382,7 +397,6 @@ marked.setOptions({
   }
 })
 
-const isEnhancedMode = ref(false)
 const userInput = ref('')
 const error = ref(null)
 /** @type {import('@/types/knowledge').ChatMessage[]} */
@@ -407,15 +421,27 @@ const categories = computed(() => {
   }))
 })
 
-const toggleEnhancedMode = () => {
-  isEnhancedMode.value = !isEnhancedMode.value
-  if (isEnhancedMode.value) {
-    chatHistory.value.push({ sender: 'ai', content: '智能模式已激活。我可以为您提供AI驱动的HR解决方案，包括实时政策更新、个性化工作流程建议和预测性分析。请问有什么我可以协助您的？', feedback: null })
-    scrollToBottom()
+// 移除 isEnhancedMode，添加生成状态控制
+const isGenerating = ref(false)
+let currentGeneration = null // 用于存储当前生成的请求
+
+// 停止生成方法
+const stopGeneration = () => {
+  if (currentGeneration) {
+    currentGeneration.abort() // 中断当前请求
+    currentGeneration = null
+    isGenerating.value = false
+    
+    // 添加系统消息提示用户生成已停止
+    chatHistory.value.push({
+      sender: 'ai',
+      content: '内容生成已停止。',
+      feedback: null
+    })
   }
 }
 
-// 修改发送消息方法，处理引用内容
+// 修改发送消息方法
 const sendMessage = async () => {
   if (!currentKnowledgeBase.value) {
     alert('请先选择知识库')
@@ -423,6 +449,9 @@ const sendMessage = async () => {
   }
   
   if (userInput.value.trim() === '') return
+  
+  // 如果正在生成，则不允许发送新消息
+  if (isGenerating.value) return
   
   const message = userInput.value
   chatHistory.value.push({ 
@@ -434,14 +463,24 @@ const sendMessage = async () => {
   scrollToBottom()
   
   try {
-    const stream = await KnowledgeBaseService.query(currentKnowledgeBase.value, message)
+    isGenerating.value = true
+    
+    // 创建 AbortController
+    const controller = new AbortController()
+    currentGeneration = controller
+    
+    const stream = await KnowledgeBaseService.query(
+      currentKnowledgeBase.value,
+      message,
+      controller.signal // 传入 signal 以支持中断
+    )
+    
     let responseContent = ''
     let references = []
     
     for await (const chunk of stream) {
       if (chunk.type === 'content') {
         responseContent += chunk.text
-        // 更新最新的消息内容
         updateLatestMessage(responseContent, references)
       } else if (chunk.type === 'reference') {
         references.push({
@@ -449,21 +488,25 @@ const sendMessage = async () => {
           source: chunk.source,
           similarity: chunk.similarity
         })
-        // 更新最新消息的引用
         updateLatestMessage(responseContent, references)
       }
       scrollToBottom()
     }
   } catch (error) {
-    console.error('Knowledge base query failed:', error)
-    chatHistory.value.push({
-      sender: 'ai',
-      content: '抱歉，服务器出现错误，请稍后再试。',
-      feedback: null
-    })
+    if (error.name === 'AbortError') {
+      console.log('Generation aborted')
+    } else {
+      console.error('Knowledge base query failed:', error)
+      chatHistory.value.push({
+        sender: 'ai',
+        content: '抱歉，服务器出现错误，请稍后再试。',
+        feedback: null
+      })
+    }
+  } finally {
+    isGenerating.value = false
+    currentGeneration = null
   }
-  
-  scrollToBottom()
 }
 
 /**
@@ -475,19 +518,21 @@ const updateLatestMessage = (content, references) => {
   if (chatHistory.value.length > 0) {
     const lastMessage = chatHistory.value[chatHistory.value.length - 1]
     if (lastMessage.sender === 'ai') {
-      // 如果内容中包含引用标记，解析它
-      const referencesMatch = content.match(/<references.*?\/>/)
-      if (referencesMatch) {
-        lastMessage.references = parseReferences(referencesMatch[0])
-        lastMessage.content = formatContent(content)
-      } else {
-        lastMessage.content = content
+      lastMessage.content = content
+      // 如果有引用内容，直接设置
+      if (references && references.length > 0) {
         lastMessage.references = references
+      } else {
+        // 尝试从内容中解析引用
+        const parsedRefs = getReferences({ content })
+        if (parsedRefs.length > 0) {
+          lastMessage.references = parsedRefs
+        }
       }
     } else {
       chatHistory.value.push({
         sender: 'ai',
-        content: formatContent(content),
+        content: content,
         feedback: null,
         references: references
       })
@@ -504,16 +549,20 @@ const toggleCategories = () => {
   showCategories.value = !showCategories.value
 }
 
-const selectCategory = (kb) => {
-  chatHistory.value = [{
+// 添加当前选中卡片的状态
+const selectedCardIndex = ref(null)
+
+// 修改选择知识库的方法
+const selectCategory = (category, index) => {
+  currentKnowledgeBase.value = category
+  selectedCardIndex.value = index // 记录选中的卡片索引
+  
+  // 可选：添加选择提示
+  chatHistory.value.push({
     sender: 'ai',
-    content: `欢迎使用${kb.name}。我可以为您提供相关的详细信息和解答问题。请问您想了解哪些具体方面？`,
+    content: `已选择知识库: ${category.name}，您可以开始提问了。`,
     feedback: null
-  }]
-  // 存储当前选中的知识库配置
-  currentKnowledgeBase.value = kb
-  userInput.value = ''
-  scrollToBottom()
+  })
 }
 
 const closeWelcomeModal = () => {
@@ -570,8 +619,15 @@ const removeCategory = (index) => {
 }
 
 const saveSettings = () => {
-  // 这里可以添加保存设置的逻辑，比如发送到服务器
-  console.log('保存设置:', categories.value)
+  // 保存引用显示设置
+  localStorage.setItem('showReferences', showReferences.value.toString())
+  
+  // 保存知识库设置
+  localStorage.setItem('knowledgeBases', JSON.stringify(knowledgeBases.value))
+  
+  // 强制重新渲染聊天记录以应用新设置
+  chatHistory.value = [...chatHistory.value]
+  
   closeSettings()
 }
 
@@ -583,11 +639,11 @@ const provideFeedback = (index, type) => {
   }
 }
 
-watch(isEnhancedMode, (newValue) => {
+watch(isGenerating, (newValue) => {
   if (newValue) {
-    document.body.classList.add('enhanced-mode')
+    document.body.classList.add('generating-mode')
   } else {
-    document.body.classList.remove('enhanced-mode')
+    document.body.classList.remove('generating-mode')
   }
 }, { immediate: true })
 
@@ -612,7 +668,7 @@ const knowledgeBases = ref([
   },
   {
     name: '灵活工作制度',
-    description: '基于大数据的智��排班和考勤管理系统。',
+    description: '基于大数据的智排班和考勤管理系统。',
     space_name: 'flexible_work',
     api_url: 'http://10.240.2.140:5999/api/v2/chat/completions',
     model: 'moonshot_proxyllm'
@@ -891,7 +947,7 @@ const hidePopup = () => {
   if (!keepPopup.value) {
     activePopupIndex.value = null
     isPopupVisible.value = false
-    // 重置位置和箭头状态
+    // 重置位置和箭状态
     popupPosition.value = {}
     arrowPosition.value = {}
   }
@@ -926,52 +982,90 @@ const renderContent = (content) => {
   try {
     if (!content) return ''
     
-    // 移除引用标记
-    const cleanContent = formatContent(content)
+    // 移除引用标记，但保留内容格式
+    const cleanContent = content.split('<references')[0].trim()
     
     // 预处理内容
     let processedContent = cleanContent
-      // 处理多余的空行，最多保留一个空行
       .replace(/\n{3,}/g, '\n\n')
-      // 处理列表项之间的空行
       .replace(/(\n\s*[-*]\s.*?)(\n{2,})(?=\s*[-*]\s)/g, '$1\n')
-      // 确保列表项前有一个空行
       .replace(/(?<!^\n|^\s*$)(\n\s*[-*]\s)/g, '\n\n$1')
-      // 处理数字列表
       .replace(/(\d+)\.\s+/g, '$1\\. ')
-      // 处理换行
       .replace(/\\n/g, '\n')
-    
-    // 配置 marked 选项
-    marked.setOptions({
-      gfm: true,
-      breaks: true,
-      smartLists: true,
-      smartypants: false,
-      headerIds: false,
-      mangle: false,
-      pedantic: false,
-      sanitize: false
-    })
     
     // 将内容转换为 HTML
     const rawHtml = marked(processedContent)
     
     // 净化 HTML
-    const cleanHtml = DOMPurify.sanitize(rawHtml, {
+    return DOMPurify.sanitize(rawHtml, {
       ADD_TAGS: ['table', 'thead', 'tbody', 'tr', 'th', 'td', 'br', 'pre', 'code', 'ul', 'ol', 'li'],
       ADD_ATTR: ['class'],
       FORBID_TAGS: ['script', 'style', 'iframe'],
       FORBID_ATTR: ['onerror', 'onclick', 'onload'],
       ALLOW_DATA_ATTR: false
     })
-    
-    return cleanHtml
   } catch (e) {
     console.error('Render error:', e)
     return content
   }
 }
+
+// 更新引用内容获取方法
+const getReferences = (message) => {
+  try {
+    // 如果禁用了引用显示，直接返回空数组
+    if (!showReferences.value) {
+      return []
+    }
+
+    // 如果已经是解析过的引用数组，直接返回
+    if (Array.isArray(message.references)) {
+      return message.references
+    }
+    
+    // 如果是字符串形式的引用，解析它
+    if (typeof message.content === 'string' && message.content.includes('<references')) {
+      const referencesMatch = message.content.match(/<references.*?\/>/)
+      if (referencesMatch) {
+        const match = referencesMatch[0].match(/references="(.*?)"/)
+        if (match && match[1]) {
+          const decodedStr = match[1].replace(/&quot;/g, '"')
+          const parsed = JSON.parse(decodedStr)
+          return parsed[0]?.chunks || []
+        }
+      }
+    }
+    
+    return []
+  } catch (e) {
+    console.error('Failed to parse references:', e)
+    return []
+  }
+}
+
+// 更新引用显示控制
+const showReferences = ref(localStorage.getItem('showReferences') !== 'false') // 默认为 true
+
+// 切换引用显示状态
+const toggleReferenceDisplay = () => {
+  showReferences.value = !showReferences.value
+  localStorage.setItem('showReferences', showReferences.value.toString())
+}
+
+// 在组件挂载时加载引用显示设置
+onMounted(() => {
+  // 从本地存储加载引用显示设置
+  const savedShowReferences = localStorage.getItem('showReferences')
+  if (savedShowReferences !== null) {
+    showReferences.value = savedShowReferences === 'true'
+  }
+})
+
+// 监听引用显示状态变化
+watch(showReferences, (newValue) => {
+  // 强制重新渲染聊天记录
+  chatHistory.value = [...chatHistory.value]
+})
 </script>
 
 <style>
@@ -1214,5 +1308,40 @@ html, body {
 /* 调整列表项与段落的间距 */
 .markdown-content li p {
   margin: 0.25em 0;  /* 减小列表项内段落的间距 */
+}
+
+/* 添加开关按钮动画 */
+.translate-x-1 {
+  transform: translateX(0.25rem);
+}
+
+.translate-x-6 {
+  transform: translateX(1.5rem);
+}
+
+.transition-transform {
+  transition-property: transform;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+
+/* 添加卡片选中效果的过渡动画 */
+.ring-2 {
+  transition: all 0.3s ease-in-out;
+}
+
+/* 添加阴影过渡效果 */
+.shadow-lg {
+  transition: box-shadow 0.3s ease-in-out;
+}
+
+/* 优化 hover 缩放效果 */
+.transform {
+  transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+}
+
+.hover\:scale-105:hover {
+  transform: scale(1.05);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 </style>
