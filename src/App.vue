@@ -4,7 +4,7 @@
       <div class="flex items-center flex-grow">
         <h1 class="text-2xl font-bold flex items-center text-emerald-400">
           <Cpu class="mr-2" :size="24" />
-          智能HR知识库
+          GAMECO HR员工服务知识库
         </h1>
 
         <div class="flex items-center ml-8 space-x-8 text-emerald-300">
@@ -14,7 +14,7 @@
           </div>
           <div class="flex items-center space-x-2">
             <Zap class="w-5 h-5 animate-bounce" />
-            <span class="text-sm font-medium">创新形式</span>
+            <span class="text-sm font-medium">创新服务</span>
           </div>
           <div class="flex items-center space-x-2">
             <Database class="w-5 h-5 animate-spin-slow" />
@@ -349,9 +349,9 @@
     <Transition name="fade">
       <div v-if="showWelcomeModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-md w-full">
-          <h2 class="text-2xl font-bold mb-4 text-gray-800 dark:text-white">欢迎用智能HR知识库</h2>
+          <h2 class="text-2xl font-bold mb-4 text-gray-800 dark:text-white">欢迎使用员工服务知识库</h2>
           <p class="text-gray-600 dark:text-gray-300 mb-4">
-            本系统基于科创项目实现，答案可存不准确。您的使用和反馈将提供给我们的团队进行进一步优化。感谢您的参和使用！
+            本系统由GAMECO科创团队基于AI技术实现，目的是实现一种智能问答知识库，目前我们正在测试HR员工服务问答功能。您的使用和反馈将帮助我们进一步优化这个项目。如果你认为答案不准确，请在对话中点击反馈按钮，或者随时联系我们，感谢您的参与和使用！
           </p>
           <button 
             @click="closeWelcomeModal" 
@@ -401,7 +401,7 @@ const userInput = ref('')
 const error = ref(null)
 /** @type {import('@/types/knowledge').ChatMessage[]} */
 const chatHistory = ref([
-  { sender: 'ai', content: '欢迎使用智能HR知识库。我能为您提供哪些HR相关的信息或服务？', feedback: null }
+  { sender: 'ai', content: '欢迎使用GAMECO HR员工服务知识库。请输入选择对应服务模块后，输入您要了解的问题？', feedback: null }
 ])
 const showCategories = ref(true)
 const showWelcomeModal = ref(true)
@@ -469,26 +469,37 @@ const sendMessage = async () => {
     const controller = new AbortController()
     currentGeneration = controller
     
+    // 添加一个空的 AI 消息占位
+    chatHistory.value.push({
+      sender: 'ai',
+      content: '',
+      feedback: null,
+      references: []
+    })
+    
     const stream = await KnowledgeBaseService.query(
       currentKnowledgeBase.value,
       message,
-      controller.signal // 传入 signal 以支持中断
+      controller.signal
     )
     
-    let responseContent = ''
-    let references = []
+    let currentContent = ''
+    let currentReferences = []
     
     for await (const chunk of stream) {
       if (chunk.type === 'content') {
-        responseContent += chunk.text
-        updateLatestMessage(responseContent, references)
+        currentContent += chunk.text
+        // 更新最后一条消息的内容
+        chatHistory.value[chatHistory.value.length - 1].content = currentContent
       } else if (chunk.type === 'reference') {
-        references.push({
+        currentReferences.push({
           content: chunk.text,
           source: chunk.source,
-          similarity: chunk.similarity
+          recall_score: chunk.similarity,
+          id: chunk.id
         })
-        updateLatestMessage(responseContent, references)
+        // 更新最后一条消息的引用
+        chatHistory.value[chatHistory.value.length - 1].references = currentReferences
       }
       scrollToBottom()
     }
@@ -506,37 +517,6 @@ const sendMessage = async () => {
   } finally {
     isGenerating.value = false
     currentGeneration = null
-  }
-}
-
-/**
- * 更新最新消息的辅助方法
- * @param {string} content
- * @param {import('@/types/knowledge').MessageReference[]} references
- */
-const updateLatestMessage = (content, references) => {
-  if (chatHistory.value.length > 0) {
-    const lastMessage = chatHistory.value[chatHistory.value.length - 1]
-    if (lastMessage.sender === 'ai') {
-      lastMessage.content = content
-      // 如果有引用内容，直接设置
-      if (references && references.length > 0) {
-        lastMessage.references = references
-      } else {
-        // 尝试从内容中解析引用
-        const parsedRefs = getReferences({ content })
-        if (parsedRefs.length > 0) {
-          lastMessage.references = parsedRefs
-        }
-      }
-    } else {
-      chatHistory.value.push({
-        sender: 'ai',
-        content: content,
-        feedback: null,
-        references: references
-      })
-    }
   }
 }
 

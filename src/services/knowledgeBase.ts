@@ -37,7 +37,7 @@ export class KnowledgeBaseService {
   }
 
   // 发送知识库查询 - 使用流式响应
-  static async query(kb: KnowledgeBase, message: string) {
+  static async query(kb: KnowledgeBase, message: string, signal?: AbortSignal) {
     const response = await fetch(kb.api_url, {
       method: 'POST',
       headers: {
@@ -49,7 +49,8 @@ export class KnowledgeBaseService {
         model: kb.model,
         chat_mode: "chat_knowledge",
         chat_param: kb.space_name
-      })
+      }),
+      signal
     })
 
     if (!response.ok) {
@@ -61,7 +62,6 @@ export class KnowledgeBaseService {
       throw new Error('No readable stream available')
     }
 
-    // 使用 Map 而不是 Set 来记录引用，可以存储更多信息
     const processedRefs = new Map()
     let currentContent = ''
 
@@ -76,40 +76,33 @@ export class KnowledgeBaseService {
             const lines = text.split('\n')
             
             for (const line of lines) {
-              if (line.startsWith('data: ')) {
-                const data = line.slice(5)
+              if (line.trim() === '') continue
+              
+              if (line.startsWith('data:')) {
+                const data = line.slice(5).trim()
                 if (data === '[DONE]') return
                 
                 try {
                   const parsed = JSON.parse(data)
+                  
                   // 处理回答内容
                   if (parsed.choices?.[0]?.delta?.content) {
-                    currentContent += parsed.choices[0].delta.content
+                    const content = parsed.choices[0].delta.content
+                    currentContent += content
                     yield {
                       type: 'content',
-                      text: parsed.choices[0].delta.content
+                      text: content
                     }
                   }
+                  
                   // 处理引用内容
                   if (parsed.references) {
-                    // 清理之前的引用记录，只保留当前回答相关的引用
-                    if (currentContent.includes('<references')) {
-                      processedRefs.clear()
-                    }
-                    
-                    // 遍历所有引用块
                     for (const ref of parsed.references) {
-                      for (const chunk of ref.chunks) {
-                        // 使用更可靠的唯一标识
+                      for (const chunk of ref.chunks || []) {
                         const refKey = `${chunk.id}-${chunk.content.substring(0, 50)}`
                         
                         if (!processedRefs.has(refKey)) {
-                          processedRefs.set(refKey, {
-                            content: chunk.content,
-                            source: chunk.meta_info?.source || '未知',
-                            similarity: chunk.recall_score
-                          })
-                          
+                          processedRefs.set(refKey, true)
                           yield {
                             type: 'reference',
                             text: chunk.content,
@@ -122,7 +115,7 @@ export class KnowledgeBaseService {
                     }
                   }
                 } catch (e) {
-                  console.error('Failed to parse JSON:', e)
+                  console.error('Failed to parse JSON:', e, data)
                 }
               }
             }
